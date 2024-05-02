@@ -1,0 +1,193 @@
+--1 - Se pide el nombre de un estudiante por pantalla; decir cuántos estudiantes tienen el mismo nombre, en caso de que no existan avisar.
+
+
+SET SERVEROUTPUT on;
+CREATE OR REPLACE PROCEDURE
+nombre_estudiante(var_nombre estudiantes.nombre%type)
+AS
+   var_total number;
+BEGIN
+  
+   select count(*) into var_total from estudiantes  where nombre=var_nombre;
+
+   DBMS_output.put_line(var_total);
+END;
+
+BEGIN
+ nombre_estudiante('&inserte_nombre');
+ 
+END;
+ 
+select * from estudiantes;
+
+
+//////////////////////////////////////////////
+
+2....Crear un procedimiento que actualice los valores de dicha tabla.
+
+
+CREATE OR REPLACE PROCEDURE 
+actualizar_Especialidad
+AS
+BEGIN
+DELETE FROM especialidades;
+FOR i in (SELECT especialidad as especialidad, SUM(creditos) as creditos, COUNT(*) as student FROM estudiantes GROUP BY especialidad)LOOP
+    Insert into especialidades values(i.especialidad, i.creditos, i.student);
+    END LOOP;
+    commit;
+END;
+EXECUTE actualizar_Especialidad()
+
+insert into estudiantes values (189,'DRAXLER','COMAN','Matemáticas',15);
+SELECT * FROM ESpecialidades;
+SELECT * FROM ESTUDIANTES
+
+
+//////////////////////////////////////////////
+
+
+
+--3 - Crear un procedimiento que permita matricular a un estudiante en un curso.
+
+create or replace procedure abc_(
+var_idestudiante matriculas.idestudiante%type,
+var_departamento matriculas.departamento%type,
+var_ncurso matriculas.ncurso%type,
+var_grado matriculas.grado%type
+)
+as
+begin
+insert into matriculas(idestudiante,departamento,ncurso,grado
+) values (var_idestudiante, var_departamento,var_ncurso,var_grado );
+end abc_;
+
+EXECUTE abc_(2,'CIV',129,'D');
+
+
+
+//////////////////////////////////////////////
+
+
+
+4.... Mostrar por pantalla al estudiante con el ID mayor y al estudiante con el ID menor.
+
+
+SELECT * FROM estudiantes 
+WHERE id = (SELECT MAX(id) FROM estudiantes)
+OR id = (SELECT MIN(id) FROM estudiantes);
+
+
+//////////////////////////////////////////////
+
+
+
+--5 - Crear un trigger que garantice que un estudiante no va tener menos de 6 créditos ni más de 15.
+
+CREATE OR REPLACE TRIGGER  verificar_creditos
+BEFORE INSERT OR UPDATE ON estudiantes FOR EACH ROW
+BEGIN
+    IF :NEW.creditos < 6 OR :NEW.creditos > 15 THEN
+       
+        RAISE_APPLICATION_ERROR(-20001, 'El número de créditos no está dentro del rango permitido');
+    END IF;
+END;
+
+INSERT INTO ESTUDIANTES VALUES (187, 'pepe', 'gomez', 'Computacion', 17);
+
+
+
+
+//////////////////////////////////////////////
+
+
+
+
+--6 - Crear un procedimiento que tome a todos los estudiantes de deportes y les aumente 2 créditos, en caso de no existir ninguno no hacer nada.
+
+SET SERVEROUTPUT ON;
+CREATE OR REPLACE PROCEDURE aumentar_creditos_deportes
+AS
+BEGIN
+    UPDATE estudiantes
+    SET creditos = creditos + 2
+    WHERE especialidad = 'Deportes';
+    
+    IF SQL%ROWCOUNT = 0 THEN
+        DBMS_OUTPUT.PUT_LINE('No se encontraron estudiantes de deportes.');
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('Créditos aumentados para estudiantes de deportes.');
+    END IF;
+END ;
+ EXECUTE aumentar_creditos_deportes;
+
+select*from estudiantes;
+
+
+//////////////////////////////////////////////
+
+
+
+7 - crear una función que retorne el futuro correo electrónico del estudiante, el correo
+debe de ser:
+
+CREATE OR REPLACE FUNCTION CORREO_EST(estudiante_id estudiantes.id%type)
+RETURN VARCHAR
+IS
+var_nombre estudiantes.nombre%type;
+var_apellido estudiantes.apellido%type;
+var_3 number;
+BEGIN
+select LOWER(nombre) into var_nombre from estudiantes where id= estudiante_id;
+select LOWER(apellido) into var_apellido from estudiantes where id= estudiante_id;
+var_3:=EXTRACT(YEAR FROM SYSDATE);
+if
+var_nombre IS NOT NULL AND var_apellido IS NOT NULL THEN
+return SUBSTR(var_nombre,1,2)||'.'||SUBSTR(var_apellido,1,2)||'-'||var_3||estudiante_id||'@colegio.com';
+end if;
+exception
+when no_data_found then
+return 'Estudiante no encontrado';
+END;
+
+select CORREO_EST(2) from dual;
+
+
+
+
+
+//////////////////////////////////////////////
+
+
+
+
+--8 - Determinar el nivel poblacional de las matrículas de cursos, ósea: “contar cuantas matrículas tiene cada curso” clasificar en:
+--● Baja: de 0 a 10 estudiantes.
+--● Media: de 11 a 20 estudiantes.
+--● Alta: más de 21 estudiantes.
+
+CREATE OR REPLACE FUNCTION clasificar_poblacion_curso(departamento cursos.departamento%TYPE, ncurso cursos.ncurso%TYPE)
+RETURN VARCHAR2 IS  
+    var_poblacion_curso NUMBER;
+    var_clasificacion VARCHAR2(10);
+BEGIN
+    SELECT COUNT(*) INTO var_poblacion_curso
+    FROM matriculas
+    WHERE departamento = clasificar_poblacion_curso.departamento
+    AND ncurso = clasificar_poblacion_curso.ncurso;
+    
+    var_clasificacion :=
+        CASE
+            WHEN var_poblacion_curso BETWEEN 0 AND 10 THEN 'Baja'
+            WHEN var_poblacion_curso BETWEEN 11 AND 20 THEN 'Media'
+            WHEN var_poblacion_curso > 20 THEN 'Alta'
+           
+        END;
+        
+    RETURN var_clasificacion;
+END clasificar_poblacion_curso;
+
+SELECT departamento, ncurso, descripcioncurso, clasificar_poblacion_curso(departamento, ncurso) as poblacion_curso FROM cursos;
+
+
+
+
